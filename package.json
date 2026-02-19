@@ -1,0 +1,29 @@
+{
+  "name": "astro-signer",
+  "version": "0.1",
+  "private": true,
+  "scripts": {
+    "start": "node ./bin/www",
+    "dev": "./node_modules/.bin/nodemon bin/www"
+  },
+  "dependencies": {
+    "@solana/web3.js": "^1.98.4",
+    "axios": "^1.13.5",
+    "bip39": "^3.1.0",
+    "compression": "^1.8.1",
+    "ed25519-hd-key": "^1.3.0",
+    "ethers": "^6.16.0",
+    "express": "~5.2.1",
+    "express-rate-limit": "^8.2.1",
+    "helmet": "^8.1.0",
+    "http-errors": "~1.6.3",
+    "morgan": "~1.10.1",
+    "winston": "^3.19.0",
+    "winston-daily-rotate-file": "^5.0.0",
+    "xss": "^1.0.15"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7"
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+}

@@ -1,0 +1,92 @@
+#!/usr/bin/env node
+
+process.loadEnvFile()
+var app = require('../src/app');
+var http = require('http');
+
+/**
+ * Get port from environment and store in Express.
+ */
+
+var port = normalizePort(process.env.PORT);
+app.set('port', port);
+
+/**
+ * Create HTTP server.
+ */
+const server = http.createServer(app);
+
+/**
+ * Listen on provided port, on all network interfaces.
+ */
+
+// Security default: bind to localhost only (avoid accidental public exposure).
+// If you REALLY know what you're doing, set:
+// - BIND_HOST=0.0.0.0 and ALLOW_PUBLIC_BIND=1
+const host = process.env.BIND_HOST || '127.0.0.1';
+const allowPublic = process.env.ALLOW_PUBLIC_BIND === '1' || process.env.ALLOW_PUBLIC_BIND === 'true';
+if ((host === '0.0.0.0' || host === '::' || host === '::0') && !allowPublic) {
+  throw new Error('Refusing to bind on 0.0.0.0 without ALLOW_PUBLIC_BIND=1');
+}
+server.listen(port, host);
+server.on('error', onError);
+server.on('listening', onListening);
+
+/**
+ * Normalize a port into a number, string, or false.
+ */
+
+function normalizePort(val) {
+  var port = parseInt(val, 10);
+
+  if (isNaN(port)) {
+    // named pipe
+    return val;
+  }
+
+  if (port >= 0) {
+    // port number
+    return port;
+  }
+
+  return false;
+}
+
+/**
+ * Event listener for HTTP server "error" event.
+ */
+
+function onError(error) {
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+
+  var bind = typeof port === 'string'
+    ? 'Pipe ' + port
+    : 'Port ' + port;
+
+  // handle specific listen errors with friendly messages
+  switch (error.code) {
+    case 'EACCES':
+      console.error(bind + ' requires elevated privileges');
+      process.exit(1);
+      break;
+    case 'EADDRINUSE':
+      console.error(bind + ' is already in use');
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
+}
+
+/**
+ * Event listener for HTTP server "listening" event.
+ */
+
+function onListening() {
+  var addr = server.address();
+  console.log(`Astro Signer Server is running on http://${host}:${addr.port}`);
+}
+
+console.log(`Node.js version: ${process.versions.node}`);
