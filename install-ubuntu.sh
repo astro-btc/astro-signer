@@ -2,12 +2,11 @@
 set -euo pipefail
 
 APP_NAME="astro-signer"
-APP_USER="astro-signer"
-APP_GROUP="astro-signer"
-INSTALL_DIR="${INSTALL_DIR:-/opt/astro-signer}"
+APP_USER="root"
+APP_GROUP="root"
+INSTALL_DIR="${INSTALL_DIR:-$(pwd -P)}"
 REPO_URL="${REPO_URL:-https://github.com/astro-btc/astro-signer.git}"
-BRANCH="${BRANCH:-master}"
-SERVICE_PATH="/etc/systemd/system/${APP_NAME}.service"
+BRANCH="${BRANCH:-main}"
 ENV_FILE="${INSTALL_DIR}/.env"
 
 PORT="${PORT:-33333}"
@@ -84,27 +83,31 @@ install_yarn_if_needed() {
   log "Yarn 安装完成：$(yarn -v)"
 }
 
-ensure_user() {
-  if id -u "${APP_USER}" >/dev/null 2>&1; then
-    log "已存在用户：${APP_USER}"
+install_pm2_if_needed() {
+  if need_cmd pm2; then
+    log "已检测到 PM2：$(pm2 -v)，跳过安装"
     return
   fi
-  log "创建系统用户：${APP_USER}"
-  useradd --system --create-home --home-dir "/var/lib/${APP_NAME}" --shell /usr/sbin/nologin "${APP_USER}"
+  log "安装 PM2"
+  npm install -g pm2
+  log "PM2 安装完成：$(pm2 -v)"
 }
 
 deploy_code() {
   log "部署代码到：${INSTALL_DIR}"
+  mkdir -p "${INSTALL_DIR}"
+
   if [[ -d "${INSTALL_DIR}/.git" ]]; then
     git -C "${INSTALL_DIR}" fetch --all --prune
     git -C "${INSTALL_DIR}" checkout "${BRANCH}"
     git -C "${INSTALL_DIR}" pull --ff-only origin "${BRANCH}"
-  else
-    rm -rf "${INSTALL_DIR}"
+  elif [[ -z "$(ls -A "${INSTALL_DIR}")" ]]; then
     git clone --branch "${BRANCH}" --depth 1 "${REPO_URL}" "${INSTALL_DIR}"
+  elif [[ -f "${INSTALL_DIR}/package.json" && -f "${INSTALL_DIR}/bin/www" ]]; then
+    log "检测到当前目录已有项目代码，跳过克隆"
+  else
+    die "目录 ${INSTALL_DIR} 非空且不是 astro-signer 项目目录。请先切到空目录再执行，或通过 INSTALL_DIR 指定目标目录。"
   fi
-
-  chown -R "${APP_USER}:${APP_GROUP}" "${INSTALL_DIR}"
 }
 
 set_env_kv() {
@@ -167,76 +170,50 @@ setup_env_file() {
   fi
   set_env_kv "TRUST_PROXY" "${TRUST_PROXY}"
 
-  chown "${APP_USER}:${APP_GROUP}" "${ENV_FILE}"
   chmod 600 "${ENV_FILE}"
 }
 
 install_deps() {
   log "安装 Node 依赖（yarn install --production）"
-  sudo -u "${APP_USER}" -H bash -lc "cd \"${INSTALL_DIR}\" && yarn install --frozen-lockfile --production"
+  (cd "${INSTALL_DIR}" && yarn install --frozen-lockfile --production)
 }
 
 prepare_logs_dir() {
   log "准备日志目录（logs/）"
   mkdir -p "${INSTALL_DIR}/logs/error" "${INSTALL_DIR}/logs/info" "${INSTALL_DIR}/logs/debug" "${INSTALL_DIR}/logs/summary"
-  chown -R "${APP_USER}:${APP_GROUP}" "${INSTALL_DIR}/logs"
 }
 
-write_systemd_service() {
-  log "写入 systemd 服务：${SERVICE_PATH}"
-  cat > "${SERVICE_PATH}" <<EOF
-[Unit]
-Description=Astro Signer (Express)
-After=network-online.target
-Wants=network-online.target
+start_pm2_service() {
+  local start_cmd
+  start_cmd="cd \"${INSTALL_DIR}\" && set -a && . \"${ENV_FILE}\" && set +a && exec /usr/bin/node \"${INSTALL_DIR}/bin/www\""
 
-[Service]
-Type=simple
-User=${APP_USER}
-Group=${APP_GROUP}
-WorkingDirectory=${INSTALL_DIR}
-Environment=NODE_ENV=production
-EnvironmentFile=${ENV_FILE}
-ExecStart=/usr/bin/node ${INSTALL_DIR}/bin/www
-Restart=on-failure
-RestartSec=3
+  log "使用 PM2 启动服务"
+  pm2 delete "${APP_NAME}" >/dev/null 2>&1 || true
+  pm2 start /bin/bash --name "${APP_NAME}" -- -lc "${start_cmd}"
+  pm2 save
 
-# Hardening（尽量收紧权限；允许写 logs）
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=strict
-ProtectHome=true
-ReadWritePaths=${INSTALL_DIR}/logs
+  log "配置 PM2 开机自启"
+  pm2 startup systemd -u "${APP_USER}" --hp "/root"
+  systemctl enable "pm2-${APP_USER}"
 
-[Install]
-WantedBy=multi-user.target
-EOF
-
-  systemctl daemon-reload
-  systemctl enable "${APP_NAME}"
-}
-
-start_service() {
-  log "启动服务并设置开机自启"
-  systemctl restart "${APP_NAME}"
-  systemctl --no-pager --full status "${APP_NAME}" || true
+  pm2 status "${APP_NAME}"
 }
 
 post_instructions() {
-  cat <<'EOF'
+  cat <<EOF
 
 安装完成。
 
 下一步（强烈建议立刻做）：
-1) 编辑 /opt/astro-signer/.env，把 MNEMONIC 改成你真实的钱包助记词（非常敏感，务必妥善保管）
+1) 编辑 ${ENV_FILE}，把 MNEMONIC 改成你真实的钱包助记词（非常敏感，务必妥善保管）
    同时建议检查/更换 REMOTE_SIGNER_SECRET（该值用于远程调用鉴权，必须保密）
 2) 然后重启服务使配置生效：
-   sudo systemctl restart astro-signer
+   pm2 restart astro-signer --update-env
 
 常用命令：
-- 查看日志：sudo journalctl -u astro-signer -f --no-pager
-- 查看状态：sudo systemctl status astro-signer --no-pager
-- 停止服务：sudo systemctl stop astro-signer
+- 查看日志：pm2 logs astro-signer
+- 查看状态：pm2 status astro-signer
+- 停止服务：pm2 stop astro-signer
 
 注意：
 - 修改 .env 后必须重启服务才会生效（一般不需要重启整台服务器）。
@@ -252,15 +229,14 @@ main() {
   apt_install
   install_node_if_needed
   install_yarn_if_needed
+  install_pm2_if_needed
 
-  ensure_user
   deploy_code
   prepare_logs_dir
   setup_env_file
   install_deps
 
-  write_systemd_service
-  start_service
+  start_pm2_service
   post_instructions
 }
 
