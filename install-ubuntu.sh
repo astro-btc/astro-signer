@@ -11,7 +11,7 @@ ENV_FILE="${INSTALL_DIR}/.env"
 
 PORT="${PORT:-33333}"
 # Security default: localhost only (avoid accidental public exposure)
-BIND_HOST="${BIND_HOST:-127.0.0.1}"
+BIND_HOST="${BIND_HOST:-172.17.0.1}"
 # If you really want to bind 0.0.0.0, you must explicitly opt-in.
 ALLOW_PUBLIC_BIND="${ALLOW_PUBLIC_BIND:-0}"
 # 强烈建议通过环境变量传入真实助记词（含空格也可以）
