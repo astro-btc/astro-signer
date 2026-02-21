@@ -117,16 +117,16 @@ prompt_mnemonic_if_needed() {
     return
   fi
 
-  # 非交互环境（例如 CI）下不阻塞，保留现有行为
-  if [[ ! -t 0 ]]; then
-    log "当前不是交互终端，无法提示输入助记词；将保留 .env 中现有 MNEMONIC"
+  # 兼容 curl | sudo bash：stdin 可能是管道，但 /dev/tty 仍可交互
+  if [[ ! -r /dev/tty ]]; then
+    log "当前无可用终端输入（/dev/tty 不可读），无法提示输入助记词；将保留 .env 中现有 MNEMONIC"
     return
   fi
 
   log "请输入钱包助记词（输入可见）"
   while true; do
     local input1=""
-    read -r -p "MNEMONIC: " input1
+    read -r -p "MNEMONIC: " input1 < /dev/tty
     printf "\n"
     if [[ -z "${input1// /}" ]]; then
       printf "助记词不能为空，请重试。\n"
@@ -213,12 +213,15 @@ prepare_logs_dir() {
 }
 
 start_pm2_service() {
-  local start_cmd
-  start_cmd="cd \"${INSTALL_DIR}\" && set -a && . \"${ENV_FILE}\" && set +a && exec /usr/bin/node \"${INSTALL_DIR}/bin/www\""
+  log "使用 PM2 配置文件启动服务（pm2.config.js）"
+  # 先把 .env 导入当前 shell，再由 PM2 继承
+  set -a
+  # shellcheck disable=SC1090
+  . "${ENV_FILE}"
+  set +a
 
-  log "使用 PM2 启动服务"
   pm2 delete "${APP_NAME}" >/dev/null 2>&1 || true
-  pm2 start /bin/bash --name "${APP_NAME}" -- -lc "${start_cmd}"
+  (cd "${INSTALL_DIR}" && pm2 start "./pm2.config.js" --only "${APP_NAME}" --update-env)
   pm2 save
 
   log "配置 PM2 开机自启"
