@@ -14,7 +14,7 @@ PORT="${PORT:-33333}"
 BIND_HOST="${BIND_HOST:-172.17.0.1}"
 # If you really want to bind 0.0.0.0, you must explicitly opt-in.
 ALLOW_PUBLIC_BIND="${ALLOW_PUBLIC_BIND:-0}"
-# 强烈建议通过环境变量传入真实助记词（含空格也可以）
+# 可通过环境变量预先传入助记词（含空格也可以）
 # 例：sudo MNEMONIC="word1 word2 ..." bash install-ubuntu.sh
 MNEMONIC="${MNEMONIC:-}"
 IPV4_WHITE_LIST="${IPV4_WHITE_LIST:-}"
@@ -110,6 +110,35 @@ deploy_code() {
   fi
 }
 
+prompt_mnemonic_if_needed() {
+  # 优先使用外部传入的 MNEMONIC（便于自动化）
+  if [[ -n "${MNEMONIC}" ]]; then
+    log "检测到已通过环境变量提供助记词，跳过交互输入"
+    return
+  fi
+
+  # 非交互环境（例如 CI）下不阻塞，保留现有行为
+  if [[ ! -t 0 ]]; then
+    log "当前不是交互终端，无法提示输入助记词；将保留 .env 中现有 MNEMONIC"
+    return
+  fi
+
+  log "请输入钱包助记词（输入可见）"
+  while true; do
+    local input1=""
+    read -r -p "MNEMONIC: " input1
+    printf "\n"
+    if [[ -z "${input1// /}" ]]; then
+      printf "助记词不能为空，请重试。\n"
+      continue
+    fi
+
+    MNEMONIC="${input1}"
+    log "助记词输入完成，将写入 .env"
+    break
+  done
+}
+
 set_env_kv() {
   local key="$1"
   local value="$2"
@@ -200,7 +229,28 @@ start_pm2_service() {
 }
 
 post_instructions() {
-  cat <<EOF
+  if [[ -n "${MNEMONIC}" ]]; then
+    cat <<EOF
+
+✅ 安装完成，执行 “curl http://${BIND_HOST}:${PORT}/status” 查看运行状态。（注意不带引号）
+
+下一步（强烈建议立刻做）：
+1) 检查 ${ENV_FILE} 中的敏感配置（MNEMONIC、REMOTE_SIGNER_SECRET）是否符合你的安全要求
+2) 然后重启服务使配置生效：
+   pm2 restart astro-signer --update-env
+
+常用命令：
+- 查看日志：pm2 logs astro-signer
+- 查看状态：pm2 status astro-signer
+- 停止服务：pm2 stop astro-signer
+
+注意：
+- 修改 .env 后必须重启服务才会生效（可以重启整台服务器）。
+- 如果你修改了 PORT，记得同步调整安全组/防火墙/反向代理（Nginx 等）配置。
+- 如果你确认已重启服务但仍不生效，可再尝试重启服务器（少数情况下与系统网络/反向代理/防火墙配置联动有关）。
+EOF
+  else
+    cat <<EOF
 
 安装完成。
 
@@ -216,10 +266,11 @@ post_instructions() {
 - 停止服务：pm2 stop astro-signer
 
 注意：
-- 修改 .env 后必须重启服务才会生效（一般不需要重启整台服务器）。
+- 修改 .env 后必须重启服务才会生效（可以重启整台服务器）。
 - 如果你修改了 PORT，记得同步调整安全组/防火墙/反向代理（Nginx 等）配置。
 - 如果你确认已重启服务但仍不生效，可再尝试重启服务器（少数情况下与系统网络/反向代理/防火墙配置联动有关）。
 EOF
+  fi
 }
 
 main() {
@@ -232,6 +283,7 @@ main() {
   install_pm2_if_needed
 
   deploy_code
+  prompt_mnemonic_if_needed
   prepare_logs_dir
   setup_env_file
   install_deps
