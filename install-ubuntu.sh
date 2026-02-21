@@ -235,7 +235,7 @@ post_instructions() {
   if [[ -n "${MNEMONIC}" ]]; then
     cat <<EOF
 
-✅ 安装完成，执行 “curl http://${BIND_HOST}:${PORT}/status” 查看运行状态。（注意不带引号）
+✅ 安装完成，执行  curl http://${BIND_HOST}:${PORT}/status  查看运行状态
 
 下一步（强烈建议立刻做）：
 1) 检查 ${ENV_FILE} 中的敏感配置（MNEMONIC、REMOTE_SIGNER_SECRET）是否符合你的安全要求
