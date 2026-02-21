@@ -235,17 +235,17 @@ post_instructions() {
   if [[ -n "${MNEMONIC}" ]]; then
     cat <<EOF
 
-✅ 安装完成，执行  curl http://${BIND_HOST}:${PORT}/status  查看运行状态
+✅ 安装完成，执行  curl http://${BIND_HOST}:${PORT}/status  查看运行状态。
 
-下一步（强烈建议立刻做）：
-1) 检查 ${ENV_FILE} 中的敏感配置（MNEMONIC、REMOTE_SIGNER_SECRET）是否符合你的安全要求
-2) 然后重启服务使配置生效：
-   pm2 restart astro-signer --update-env
+打开套利页面「交易所」->「API设置」->「OKXDEX」配置
+Remote Signer URL填入： http://172.17.0.1:33333
+Remote Signer SECRET填入： ${current_secret}
 
 常用命令：
 - 查看日志：pm2 logs astro-signer
 - 查看状态：pm2 status astro-signer
 - 停止服务：pm2 stop astro-signer
+- 重启服务：pm2 restart astro-signer
 
 注意：
 - 修改 .env 后必须重启服务才会生效（可以重启整台服务器）。
