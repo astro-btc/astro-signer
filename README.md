@@ -1,6 +1,6 @@
 # Astro Signer
 
-## Ubuntu 安装指南（1G 内存，一键安装 + PM2 开机自启）
+## Ubuntu 安装指南（一键安装 + PM2 开机自启）
 
 ## 一键安装
 
@@ -11,7 +11,21 @@ mkdir -p astro-signer && cd astro-signer
 curl -fsSL https://raw.githubusercontent.com/astro-btc/astro-signer/main/install-ubuntu.sh | sudo bash
 ```
 
-安装完成后，服务名为 `astro-signer`。
+安装完成后，执行
+```
+curl http://172.17.0.1:33333/status 
+```
+
+如果返回类似
+{
+"evmAddress": "0x1234...aabb",
+"solAddress": "abcd...cdba",
+"ipv4WhiteList": false,
+"version": "0.1"
+}
+说明配置成功了
+
+# --------- 👇👇👇👇 以下内容可以不看，都是可选项，可以不用管  -----------------
 
 ## 修改配置（.env）与重启
 
