@@ -7,8 +7,7 @@
 在已运行astro的Ubuntu 机器上，先进入你想部署的目录，再执行下面命令即可完成安装、启动、并设置 PM2 开机自启（默认部署到当前目录）。
 
 ```bash
-mkdir -p astro-signer && cd astro-signer
-curl -fsSL https://raw.githubusercontent.com/astro-btc/astro-signer/main/install-ubuntu.sh | sudo bash
+if [ -d astro-signer ]; then echo "错误：目录 astro-signer 已存在，请先删除该目录后再重新安装（⚠️请注意备份数据）。"; exit 1; fi && mkdir astro-signer && cd astro-signer && curl -fsSL https://raw.githubusercontent.com/astro-btc/astro-signer/main/install-ubuntu.sh | sudo bash
 ```
 
 安装完成后，执行
@@ -25,7 +24,7 @@ curl http://172.17.0.1:33333/status
 }
 说明配置成功了
 
-# --------- 👇👇👇👇 以下内容可以不看，都是可选项，可以不用管  -----------------
+## ---- 👇👇👇 以下内容可以不看 👇👇👇  ----
 
 ## 修改配置（.env）与重启
 
