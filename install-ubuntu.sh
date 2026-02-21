@@ -19,6 +19,7 @@ ALLOW_PUBLIC_BIND="${ALLOW_PUBLIC_BIND:-0}"
 MNEMONIC="${MNEMONIC:-}"
 IPV4_WHITE_LIST="${IPV4_WHITE_LIST:-}"
 TRUST_PROXY="${TRUST_PROXY:-0}"
+REMOTE_SIGNER_SECRET_VALUE=""
 
 log() { printf "\n[%s] %s\n" "$(date '+%F %T')" "$*"; }
 die() { printf "\n[ERROR] %s\n" "$*" >&2; exit 1; }
@@ -183,7 +184,13 @@ setup_env_file() {
     secret="$(openssl rand -hex 32)"
     set_env_kv "REMOTE_SIGNER_SECRET" "\"${secret}\""
     log "已生成 REMOTE_SIGNER_SECRET（已写入 .env）"
+    current_secret="\"${secret}\""
   fi
+
+  # 提取展示用 secret（去除首尾引号）
+  REMOTE_SIGNER_SECRET_VALUE="${current_secret}"
+  REMOTE_SIGNER_SECRET_VALUE="${REMOTE_SIGNER_SECRET_VALUE%\"}"
+  REMOTE_SIGNER_SECRET_VALUE="${REMOTE_SIGNER_SECRET_VALUE#\"}"
 
   # MNEMONIC（可选通过环境变量传入；未传入则保持示例值）
   if [[ -n "${MNEMONIC}" ]]; then
@@ -239,7 +246,7 @@ post_instructions() {
 
 打开套利页面「交易所」->「API设置」->「OKXDEX」配置
 Remote Signer URL填入： http://172.17.0.1:33333
-Remote Signer SECRET填入： ${current_secret}
+Remote Signer SECRET填入： ${REMOTE_SIGNER_SECRET_VALUE}
 
 常用命令：
 - 查看日志：pm2 logs astro-signer
