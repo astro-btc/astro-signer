@@ -7,7 +7,7 @@ module.exports = {
      * - 只允许你明确列出的链、合约、方法
      *
      * 本文件内容已对齐 `../astro-core` 当前的 OKXDEX 交易路径：
-     * - chainIndex=56 (BNB Chain)
+     * - chainIndex: 1 (ETH), 56 (BNB), 42161 (ARB), 8453 (BASE)
      * - approve: ERC20 approve(spender, amount)（spender 为 OKX Token Approval 合约）
      * - swap: 调用 OKX DEX Router（/swap API 返回 tx.to 与 tx.data）
      *
@@ -18,18 +18,54 @@ module.exports = {
 
     // 允许的链（必须非空；为空会拒绝签名，避免“忘配导致全放开”）
     allowedChainIds: [
-        56, // BNB Chain (BSC) - astro-core 当前仅实现/使用该链
+        1,     // Ethereum
+        56,    // BNB Chain (BSC)
+        42161, // Arbitrum One
+        8453,  // Base
     ],
 
     // 允许的 to 地址（必须非空；为空会拒绝签名）
     // 统一用小写。
     allowedTo: [
+        // OKX DEX Router (Ethereum)
+        '0x5e1f62dac767b0491e3ce72469c217365d5b48cc',
+
+        // OKX DEX Router (Arbitrum)
+        '0x368e01160c2244b0363a35b3ff0a971e44a89284',
+
+        // OKX DEX Router (Base)
+        '0x4409921ae43a39a11d90f7b7f96cfd0b8093d9fc',
+
         // OKX DEX Router (BNB Chain)
         '0x3156020dff8d99af1ddc523ebdfb1ad2018554a0',
+
+        // OKX DEX Router used in exactOut transactions (Ethereum)
+        // https://web3.okx.com/build/dev-docs/wallet-api/dex-smart-contract
+        '0xa875fb2204ce71679be054d97f7faffeb6536d67',
+
+        // OKX DEX Router used in exactOut transactions (Arbitrum)
+        // https://web3.okx.com/build/dev-docs/wallet-api/dex-smart-contract
+        '0x9736d9a45115e33411390ebd54e5a5c3a6e25aa6',
+
+        // OKX DEX Router used in exactOut transactions (Base)
+        // https://web3.okx.com/build/dev-docs/wallet-api/dex-smart-contract
+        '0x77449ff075c0a385796da0762bcb46fd5cc884c6',
 
         // OKX DEX Router used in exactOut transactions (BNB Chain)
         // https://web3.okx.com/build/dev-docs/wallet-api/dex-smart-contract
         '0x5cb43bae4f36e2f9f858232b4dce0dbe27bb85e3',
+
+        // OKX Token Approval contract (Ethereum) - may appear as tx.to in some flows
+        // https://web3.okx.com/build/dev-docs/wallet-api/dex-smart-contract
+        '0x40aa958dd87fc8305b97f2ba922cddca374bcd7f',
+
+        // OKX Token Approval contract (Arbitrum) - may appear as tx.to in some flows
+        // https://web3.okx.com/build/dev-docs/wallet-api/dex-smart-contract
+        '0x70cbb871e8f30fc8ce23609e9e0ea87b6b222f58',
+
+        // OKX Token Approval contract (Base) - may appear as tx.to in some flows
+        // https://web3.okx.com/build/dev-docs/wallet-api/dex-smart-contract
+        '0x57df6092665eb6058de53939612413ff4b09114e',
 
         // OKX Token Approval contract (BNB Chain) - may appear as tx.to in some flows
         // https://web3.okx.com/build/dev-docs/wallet-api/dex-smart-contract
@@ -77,6 +113,18 @@ module.exports = {
         // astro-core 在 quote/base allowance 不足时会 approve 大额度（MaxUint256）
         enabled: true,
         spenderAllowlist: [
+            // OKX Token Approval contract (Ethereum) from OKX docs
+            // https://web3.okx.com/build/dev-docs/wallet-api/dex-smart-contract
+            '0x40aa958dd87fc8305b97f2ba922cddca374bcd7f',
+
+            // OKX Token Approval contract (Arbitrum) from OKX docs
+            // https://web3.okx.com/build/dev-docs/wallet-api/dex-smart-contract
+            '0x70cbb871e8f30fc8ce23609e9e0ea87b6b222f58',
+
+            // OKX Token Approval contract (Base) from OKX docs
+            // https://web3.okx.com/build/dev-docs/wallet-api/dex-smart-contract
+            '0x57df6092665eb6058de53939612413ff4b09114e',
+
             // OKX Token Approval contract (BNB Chain) from OKX docs
             // https://web3.okx.com/build/dev-docs/wallet-api/dex-smart-contract
             '0x2c34a2fb1d0b4f55de51e1d0bdefaddce6b7cdd6',
@@ -86,4 +134,3 @@ module.exports = {
         maxAmount: (2n ** 256n) - 1n,
     },
 };
-
