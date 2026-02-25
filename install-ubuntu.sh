@@ -244,9 +244,9 @@ post_instructions() {
 
 ✅ 安装完成，执行  curl http://${BIND_HOST}:${PORT}/status  查看运行状态。
 
-打开套利页面「交易所」->「API设置」->「OKXDEX」配置
-Remote Signer URL填入： http://172.17.0.1:33333
-Remote Signer SECRET填入： ${REMOTE_SIGNER_SECRET_VALUE}
+打开套利页面「交易所」->「Astro Signer配置」
+Astro Signer URL填入： http://172.17.0.1:33333
+Astro Signer SECRET填入： ${REMOTE_SIGNER_SECRET_VALUE}
 
 常用命令：
 - 查看日志：pm2 logs astro-signer
