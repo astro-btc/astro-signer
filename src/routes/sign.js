@@ -1,10 +1,15 @@
 const express = require('express');
 const { ethers } = require('ethers');
 const crypto = require('crypto');
+const bip39 = require('bip39');
+const { derivePath } = require('ed25519-hd-key');
+const { Keypair, VersionedTransaction, Transaction } = require('@solana/web3.js');
+const bs58 = require('bs58');
 const { limiters } = require('../middlewares/rateLimiter');
 const ipv4Allowlist = require('../middlewares/ipv4Allowlist');
 const remoteSignerAuth = require('../middlewares/remoteSignerAuth');
 const evmAllowlist = require('../config/evmAllowlist');
+const solanaAllowlist = require('../config/solanaAllowlist');
 
 const router = express.Router();
 
@@ -60,6 +65,18 @@ function getEvmWallet() {
         ? Wallet.fromPhrase(mnemonic)
         : Wallet.fromMnemonic(mnemonic);
     return cachedWallet;
+}
+
+let cachedSolanaKeypair = null;
+function getSolanaKeypair() {
+    if (cachedSolanaKeypair) return cachedSolanaKeypair;
+    const mnemonic = normalizeMnemonic(process.env.MNEMONIC);
+    if (!mnemonic) throw new Error('MNEMONIC missing');
+    if (!bip39.validateMnemonic(mnemonic)) throw new Error('Invalid mnemonic');
+    const seed = bip39.mnemonicToSeedSync(mnemonic);
+    const derived = derivePath("m/44'/501'/0'/0'", seed.toString('hex'));
+    cachedSolanaKeypair = Keypair.fromSeed(derived.key);
+    return cachedSolanaKeypair;
 }
 
 function toInt(v, name, { min = 0, required = false } = {}) {
@@ -189,16 +206,66 @@ function enforceEvmAllowlist(tx) {
     if (!allowedTo.includes(String(tx.to).toLowerCase())) throw badReq(`to not allowed: ${String(tx.to).toLowerCase()}`);
 }
 
+function decodeSolanaTxData(txData) {
+    try {
+        return Buffer.from(bs58.decode(txData));
+    } catch {
+        return Buffer.from(txData, 'base64');
+    }
+}
+
+function enforceSolanaAllowlist(txData) {
+    if (!solanaAllowlist.enabled) throw badReq('Solana signing disabled');
+    const maxSize = solanaAllowlist.maxTxDataSize ?? 1280;
+    const buf = decodeSolanaTxData(txData);
+    if (buf.length > maxSize) throw badReq(`txData too large: ${buf.length} > ${maxSize}`);
+    if (buf.length < 64) throw badReq('txData too short');
+}
+
+function getSolanaProgramIdsFromTx(tx) {
+    const programIds = new Set();
+    if (tx.instructions) {
+        // Legacy Transaction
+        for (const ix of tx.instructions) {
+            if (ix.programId) programIds.add(ix.programId.toBase58());
+        }
+        return programIds;
+    }
+    // VersionedTransaction (Message 或 MessageV0 均有 staticAccountKeys + compiledInstructions)
+    const msg = tx.message;
+    const staticKeys = msg.staticAccountKeys || msg.accountKeys || [];
+    const compiledIxs = msg.compiledInstructions || [];
+    for (const ix of compiledIxs) {
+        const idx = ix.programIdIndex;
+        if (idx >= staticKeys.length) {
+            throw badReq('Transaction uses address lookup table; program ID cannot be verified');
+        }
+        programIds.add(staticKeys[idx].toBase58());
+    }
+    return programIds;
+}
+
+function enforceSolanaProgramAllowlist(tx) {
+    const allowed = solanaAllowlist.allowedProgramIds;
+    if (!Array.isArray(allowed) || allowed.length === 0) return;
+    const allowSet = new Set(allowed.map((id) => String(id).trim()).filter(Boolean));
+    const programIds = getSolanaProgramIdsFromTx(tx);
+    for (const pid of programIds) {
+        if (!allowSet.has(pid)) throw badReq(`Forbidden program: ${pid}`);
+    }
+}
+
 function validateSignSchema(req, res, next) {
     const body = req.body || {};
     if (!body || typeof body !== 'object') return res.status(400).json({ code: -1, data: 'bad body' });
 
-    if (body.signType !== 'evm') return res.status(400).json({ code: -1, data: 'bad signType param' });
+    const signType = body.signType;
+    if (signType !== 'evm' && signType !== 'solana') return res.status(400).json({ code: -1, data: 'bad signType param' });
 
     const payload = body.payload ?? body.data ?? body.rawData;
     if (!payload || typeof payload !== 'object') return res.status(400).json({ code: -1, data: 'bad rawData param' });
 
-    // keep for handler
+    req.signType = signType;
     req.signPayload = payload;
     return next();
 }
@@ -218,38 +285,84 @@ async function signEvm(payload) {
     return { signedTx, txHash, from: wallet.address };
 }
 
+async function signSolana(payload) {
+    if (!payload || typeof payload !== 'object') throw badReq('bad rawData param');
+    const keypair = getSolanaKeypair();
+    const from = payload.from ? String(payload.from).trim() : '';
+    const txData = payload.txData ?? payload.tx?.data ?? payload.data;
+    if (!txData || typeof txData !== 'string') throw badReq('Missing txData for Solana');
+
+    enforceSolanaAllowlist(txData);
+    if (from && from !== keypair.publicKey.toBase58()) throw badReq(`from mismatch: req=${from}, signer=${keypair.publicKey.toBase58()}`);
+
+    const txBuf = decodeSolanaTxData(txData);
+    let tx;
+    try {
+        tx = VersionedTransaction.deserialize(txBuf);
+    } catch {
+        try {
+            tx = Transaction.from(txBuf);
+        } catch (e) {
+            throw badReq(`Invalid Solana txData: ${e?.message || 'deserialize failed'}`);
+        }
+    }
+
+    enforceSolanaProgramAllowlist(tx);
+    tx.sign([keypair]);
+    const serialized = tx.serialize();
+    const signedTx = Buffer.from(serialized).toString('base64');
+    const firstSig = tx.signatures?.[0];
+    const txHash = firstSig
+        ? bs58.encode(Buffer.from(firstSig.signature ?? firstSig))
+        : null;
+    return { signedTx, txHash, from: keypair.publicKey.toBase58() };
+}
+
 router.post('/', limiters.api, ipv4Allowlist, remoteSignerAuth, validateSignSchema, async (req, res) => {
     const startMs = Date.now();
     const p = req.signPayload;
-    const tx = p?.tx && typeof p.tx === 'object' ? p.tx : p;
-    const to = tx?.to ? String(tx.to).toLowerCase() : '';
-    const fromReq = p?.from ? String(p.from).toLowerCase() : '';
-    const chainId = tx?.chainId;
-    const sel = selectorOf(tx?.data == null ? '0x' : String(tx.data));
-    const dataLen = tx?.data == null ? 0 : String(tx.data).length;
+    const signType = req.signType;
 
-    logSign('sign_request', req, {
-        signType: 'evm',
-        chainId,
-        fromReq,
-        to,
-        selector: sel,
-        tx: {
-            nonce: tx?.nonce,
-            type: tx?.type,
-            value: tx?.value,
-            gasLimit: tx?.gasLimit,
-            gasPrice: tx?.gasPrice,
-            maxFeePerGas: tx?.maxFeePerGas,
-            maxPriorityFeePerGas: tx?.maxPriorityFeePerGas,
-            dataLen,
-        },
-    });
+    if (signType === 'evm') {
+        const tx = p?.tx && typeof p.tx === 'object' ? p.tx : p;
+        const to = tx?.to ? String(tx.to).toLowerCase() : '';
+        const fromReq = p?.from ? String(p.from).toLowerCase() : '';
+        const chainId = tx?.chainId;
+        const sel = selectorOf(tx?.data == null ? '0x' : String(tx.data));
+        const dataLen = tx?.data == null ? 0 : String(tx.data).length;
+        logSign('sign_request', req, {
+            signType: 'evm',
+            chainId,
+            fromReq,
+            to,
+            selector: sel,
+            tx: {
+                nonce: tx?.nonce,
+                type: tx?.type,
+                value: tx?.value,
+                gasLimit: tx?.gasLimit,
+                gasPrice: tx?.gasPrice,
+                maxFeePerGas: tx?.maxFeePerGas,
+                maxPriorityFeePerGas: tx?.maxPriorityFeePerGas,
+                dataLen,
+            },
+        });
+    } else {
+        const txData = p?.txData ?? p?.tx?.data ?? p?.data;
+        logSign('sign_request', req, {
+            signType: 'solana',
+            fromReq: p?.from ? safeStr(p.from, 64) : '',
+            txDataLen: txData ? String(txData).length : 0,
+        });
+    }
 
     try {
-        const data = await signEvm(req.signPayload);
+        const data = signType === 'solana'
+            ? await signSolana(req.signPayload)
+            : await signEvm(req.signPayload);
         logSign('sign_ok', req, {
             durationMs: Date.now() - startMs,
+            signType,
             signer: safeStr(data?.from || '', 64),
             txHash: safeStr(data?.txHash || '', 80),
         });
@@ -258,6 +371,7 @@ router.post('/', limiters.api, ipv4Allowlist, remoteSignerAuth, validateSignSche
         const status = Number.isInteger(e?.status) ? e.status : 500;
         logSign('sign_failed', req, {
             durationMs: Date.now() - startMs,
+            signType,
             status,
             message: safeStr(e?.message || 'unknown', 300),
         });
