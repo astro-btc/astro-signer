@@ -70,6 +70,18 @@ module.exports = {
         // OKX Token Approval contract (BNB Chain) - may appear as tx.to in some flows
         // https://web3.okx.com/build/dev-docs/wallet-api/dex-smart-contract
         '0x2c34a2fb1d0b4f55de51e1d0bdefaddce6b7cdd6',
+
+        // Uniswap V3 SwapRouter02 (BNB Chain) - swap tx.to
+        // https://docs.uniswap.org/contracts/v3/reference/deployments/bnb-deployments
+        '0xb971ef87ede563556b2ed4b1c0b0019111dd85d2',
+
+        // Uniswap V3 SwapRouter02 (Ethereum & Arbitrum) - swap tx.to
+        // https://docs.uniswap.org/contracts/v3/reference/deployments/ethereum-deployments
+        '0x68b3465833fb72a70ecdf485e0e4c7bd8665fc45',
+
+        // Uniswap V3 SwapRouter02 (Base) - swap tx.to
+        // https://docs.uniswap.org/contracts/v3/reference/deployments/base-deployments
+        '0x2626664c2603336e57b271c5c0b26f421741e481',
     ],
 
     /**
@@ -100,6 +112,9 @@ module.exports = {
         '0xb8815477', // unxswapToWithBaseRequest(uint256,address,(...),bytes32[])
         '0xf2c42696', // dagSwapByOrderId(uint256,(...), (address[],address[],uint256[],bytes[],uint256)[])  (OKX router, observed in logs)
         '0xe99bfa95', // smartSwapByInvest((...),uint256[],(...)[][],(...)[],address)
+
+        // Uniswap V3 SwapRouter02 - exactInputSingle((address,address,uint24,address,uint256,uint256,uint160))
+        '0x04e45aaf',
     ],
 
     // 是否允许 data === '0x' 的交易（通常代表原生币转账/EOA 转账）
@@ -128,9 +143,22 @@ module.exports = {
             // OKX Token Approval contract (BNB Chain) from OKX docs
             // https://web3.okx.com/build/dev-docs/wallet-api/dex-smart-contract
             '0x2c34a2fb1d0b4f55de51e1d0bdefaddce6b7cdd6',
+
+            // Uniswap V3 SwapRouter02 (BNB Chain)
+            // https://docs.uniswap.org/contracts/v3/reference/deployments/bnb-deployments
+            '0xb971ef87ede563556b2ed4b1c0b0019111dd85d2',
+
+            // Uniswap V3 SwapRouter02 (Ethereum & Arbitrum)
+            // https://docs.uniswap.org/contracts/v3/reference/deployments/ethereum-deployments
+            '0x68b3465833fb72a70ecdf485e0e4c7bd8665fc45',
+
+            // Uniswap V3 SwapRouter02 (Base)
+            // https://docs.uniswap.org/contracts/v3/reference/deployments/base-deployments
+            '0x2626664c2603336e57b271c5c0b26f421741e481',
         ],
         // 最大可授权额度（wei/uint256）。enabled=true 时生效。
         // 允许 MaxUint256（与 astro-core 行为一致）
         maxAmount: (2n ** 256n) - 1n,
     },
 };
+
