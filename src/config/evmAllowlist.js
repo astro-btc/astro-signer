@@ -82,6 +82,14 @@ module.exports = {
         // Uniswap V3 SwapRouter02 (Base) - swap tx.to
         // https://docs.uniswap.org/contracts/v3/reference/deployments/base-deployments
         '0x2626664c2603336e57b271c5c0b26f421741e481',
+
+        // PancakeSwap V3 SwapRouter (BSC, Ethereum, Arbitrum) - swap tx.to
+        // https://developer.pancakeswap.finance/contracts/v3/addresses
+        '0x1b81d678ffb9c0263b24a97847620c99d213eb14',
+
+        // PancakeSwap V3 SmartRouter (Base) - swap tx.to
+        // https://developer.pancakeswap.finance/contracts/v3/addresses
+        '0x678aa4bf4e210cf2166753e054d5b7c31cc7fa86',
     ],
 
     /**
@@ -115,6 +123,10 @@ module.exports = {
 
         // Uniswap V3 SwapRouter02 - exactInputSingle((address,address,uint24,address,uint256,uint256,uint160))
         '0x04e45aaf',
+
+        // PancakeSwap V3 SwapRouter - exactInputSingle((address,address,uint24,address,uint256,uint256,uint256,uint160))
+        // 注意：PancakeSwap V3 SwapRouter 基于原版 Uniswap V3 SwapRouter（含 deadline 参数），selector 不同于 SwapRouter02
+        '0x414bf389',
     ],
 
     // 是否允许 data === '0x' 的交易（通常代表原生币转账/EOA 转账）
@@ -155,6 +167,14 @@ module.exports = {
             // Uniswap V3 SwapRouter02 (Base)
             // https://docs.uniswap.org/contracts/v3/reference/deployments/base-deployments
             '0x2626664c2603336e57b271c5c0b26f421741e481',
+
+            // PancakeSwap V3 SwapRouter (BSC, Ethereum, Arbitrum)
+            // https://developer.pancakeswap.finance/contracts/v3/addresses
+            '0x1b81d678ffb9c0263b24a97847620c99d213eb14',
+
+            // PancakeSwap V3 SmartRouter (Base)
+            // https://developer.pancakeswap.finance/contracts/v3/addresses
+            '0x678aa4bf4e210cf2166753e054d5b7c31cc7fa86',
         ],
         // 最大可授权额度（wei/uint256）。enabled=true 时生效。
         // 允许 MaxUint256（与 astro-core 行为一致）
