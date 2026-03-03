@@ -30,16 +30,16 @@ module.exports = {
         'ComputeBudget11111111111111111111111111111111', // Compute Budget Program
 
         // 代币相关
-        // 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA', // token
-        // 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb', // token-2022
+        'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA', // SPL Token Program
+        'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb', // Token-2022 Program
         'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL', // Associated Token Program
 
         // OKX DEX Router (Solana)
         // https://web3.okx.com/build/dev-docs/wallet-api/dex-smart-contract
         'proVF4pMXVaYqmy4NjniPh4pqKNfMmsihgd4wdkCX3u',
 
-        // Jupiter Aggregator（如需支持 Jupiter 可取消注释）
+        // Jupiter Aggregator V6 (Solana)
         // https://dev.jup.ag/get-started/index#programs
-        // 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4',
+        'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4',
     ],
 };
