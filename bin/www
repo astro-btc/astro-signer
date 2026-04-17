@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
-process.loadEnvFile()
+const path = require('path');
+// 与 Node 自带 loadEnvFile 不同：允许 .env 覆盖进程环境里已由 PM2/systemd 注入的旧值。
+require('dotenv').config({ path: path.join(__dirname, '..', '.env'), override: true });
 var app = require('../src/app');
 var http = require('http');
 
