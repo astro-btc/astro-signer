@@ -27,9 +27,12 @@ module.exports = {
     // 允许的 to 地址（必须非空；为空会拒绝签名）
     // 统一用小写。
     allowedTo: [
+        // OKX DEX Router (observed in astro-core logs; added for testing / newer deployment)
+        '0x62ccef0b4545166f721caa9fee13c1d3767e27dc',
+
         // OKX DEX Router (Ethereum) - current docs / observed swap tx.to
         '0x28b1dc1a5e3699a428bc51d234dfab7c9cb2a183',
-        
+
         // OKX DEX Router (Ethereum)
         '0x5e1f62dac767b0491e3ce72469c217365d5b48cc',
 
@@ -184,4 +187,3 @@ module.exports = {
         maxAmount: (2n ** 256n) - 1n,
     },
 };
-
