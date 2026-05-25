@@ -39,8 +39,16 @@ module.exports = {
         // OKX DEX Router (Arbitrum)
         '0x368e01160c2244b0363a35b3ff0a971e44a89284',
 
+        // OKX DEX Router (Arbitrum) - current docs
+        // https://web3.okx.com/onchainos/dev-docs/trade/dex-smart-contract
+        '0x7cf6b330b437e9fb432b1400de17b03357cf049a',
+
         // OKX DEX Router (Base)
         '0x4409921ae43a39a11d90f7b7f96cfd0b8093d9fc',
+
+        // OKX DEX Router (Base) - current docs / observed swap tx.to
+        // https://web3.okx.com/onchainos/dev-docs/trade/dex-smart-contract
+        '0xc8f6b8ba0dc0f175b568b99440b0867f69a29265',
 
         // OKX DEX Router (BNB Chain)
         '0x3156020dff8d99af1ddc523ebdfb1ad2018554a0',
