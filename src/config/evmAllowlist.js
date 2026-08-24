@@ -50,6 +50,9 @@ module.exports = {
         // https://web3.okx.com/onchainos/dev-docs/trade/dex-smart-contract
         '0xc8f6b8ba0dc0f175b568b99440b0867f69a29265',
 
+        // OKX DEX Router (Base) - current / observed swap tx.to
+        '0x67d03631fe51b741c0c00c4e16eb662ac84381df',
+
         // OKX DEX Router (BNB Chain)
         '0x3156020dff8d99af1ddc523ebdfb1ad2018554a0',
 
