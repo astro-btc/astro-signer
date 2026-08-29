@@ -56,6 +56,10 @@ module.exports = {
         // OKX DEX Router (BNB Chain)
         '0x3156020dff8d99af1ddc523ebdfb1ad2018554a0',
 
+        // OKX DEX Router (BNB Chain) - current docs / observed swap tx.to
+        // https://web3.okx.com/onchainos/dev-docs/trade/dex-smart-contract
+        '0x5994814f2c4040b863a0125a45de152a8c2a4dec',
+
         // OKX DEX Router used in exactOut transactions (Ethereum)
         // https://web3.okx.com/build/dev-docs/wallet-api/dex-smart-contract
         '0xa875fb2204ce71679be054d97f7faffeb6536d67',
