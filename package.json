@@ -1,6 +1,6 @@
 {
   "name": "astro-signer",
-  "version": "1.8.29",
+  "version": "1.8.30",
   "private": true,
   "scripts": {
     "start": "node ./bin/www",
