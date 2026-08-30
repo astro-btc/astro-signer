@@ -33,6 +33,10 @@ module.exports = {
         // OKX DEX Router (Ethereum) - current docs / observed swap tx.to
         '0x28b1dc1a5e3699a428bc51d234dfab7c9cb2a183',
 
+        // OKX DEX Router (Ethereum) - current docs / observed swap tx.to
+        // https://web3.okx.com/onchainos/dev-docs/trade/dex-smart-contract
+        '0x8feab81d36e7576107d5de0758c1b839be31b4f6',
+
         // OKX DEX Router (Ethereum)
         '0x5e1f62dac767b0491e3ce72469c217365d5b48cc',
 
