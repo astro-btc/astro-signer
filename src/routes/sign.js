@@ -154,10 +154,29 @@ function mustNonEmptyArray(v, name) {
     return v;
 }
 
+// Startup self-check: the global `allowedMethodSelectors` gate runs before any chainPolicy,
+// so a selector listed only in a chainPolicy would silently be rejected at runtime.
+// Fail at boot instead of on the first production signing request.
+(function assertChainPoliciesConsistent() {
+    const globalSelectors = new Set(
+        (evmAllowlist.allowedMethodSelectors || []).map((x) => String(x).toLowerCase())
+    );
+    for (const [chainId, policy] of Object.entries(evmAllowlist.chainPolicies || {})) {
+        for (const [to, selectors] of Object.entries(policy?.allowedTo || {})) {
+            for (const sel of selectors || []) {
+                if (!globalSelectors.has(String(sel).toLowerCase())) {
+                    throw misconfig(`EVM allowlist misconfigured: chainPolicies.${chainId}.allowedTo.${to} selector ${sel} is not in allowedMethodSelectors`);
+                }
+            }
+        }
+    }
+})();
+
 function enforceEvmAllowlist(tx) {
     const chainId = Number(tx.chainId);
     const allowedChainIds = mustNonEmptyArray(evmAllowlist.allowedChainIds, 'allowedChainIds');
-    if (!allowedChainIds.includes(chainId)) throw badReq('chainId not allowed');
+    const chainPolicy = evmAllowlist.chainPolicies?.[chainId];
+    if (!allowedChainIds.includes(chainId) && !chainPolicy) throw badReq('chainId not allowed');
 
     const value = typeof tx.value === 'bigint' ? tx.value : BigInt(tx.value ?? 0);
     const maxValue = typeof evmAllowlist.maxValueWei === 'bigint' ? evmAllowlist.maxValueWei : BigInt(evmAllowlist.maxValueWei ?? 0);
@@ -189,7 +208,7 @@ function enforceEvmAllowlist(tx) {
             throw badReq('invalid approve data');
         }
 
-        const spenderAllowlist = mustNonEmptyArray(approveCfg.spenderAllowlist, 'approve.spenderAllowlist')
+        const spenderAllowlist = mustNonEmptyArray(chainPolicy ? chainPolicy.spenderAllowlist : approveCfg.spenderAllowlist, 'approve.spenderAllowlist')
             .map((x) => String(x).toLowerCase());
         if (!spenderAllowlist.includes(String(spender || '').toLowerCase())) throw badReq('approve spender not allowed');
 
@@ -201,6 +220,15 @@ function enforceEvmAllowlist(tx) {
     }
 
     // Non-approve calls must go to allowlisted routers/contracts.
+    if (chainPolicy) {
+        const to = String(tx.to).toLowerCase();
+        const selectors = chainPolicy.allowedTo?.[to];
+        if (!selectors) throw badReq(`to not allowed: ${to}`);
+        if (!mustNonEmptyArray(selectors, `chainPolicies.${chainId}.allowedTo.${to}`).includes(sel)) {
+            throw badReq(`method not allowed: to=${to} selector=${sel}`);
+        }
+        return;
+    }
     const allowedTo = mustNonEmptyArray(evmAllowlist.allowedTo, 'allowedTo')
         .map((x) => String(x).toLowerCase());
     if (!allowedTo.includes(String(tx.to).toLowerCase())) throw badReq(`to not allowed: ${String(tx.to).toLowerCase()}`);
