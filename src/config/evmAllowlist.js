@@ -24,6 +24,40 @@ module.exports = {
         8453,  // Base
     ],
 
+    // Per-chain policies. For a chain listed here, `to` and approve spender are checked
+    // ONLY against this policy (legacy `allowedTo` / `approve.spenderAllowlist` do not apply).
+    // NOTE: the global `allowedMethodSelectors` gate below still applies first, so every
+    // selector listed here must ALSO be present in `allowedMethodSelectors`; sign.js
+    // verifies this at startup and refuses to boot otherwise.
+    // Robinhood mainnet is 4663, not rh-lighter 466324.
+    chainPolicies: {
+        4663: {
+            allowedTo: {
+                // OKX DexRouter (Robinhood): https://web3.okx.com/zh-hans/onchainos/dev-docs/trade/dex-smart-contract
+                // Selectors are the OKX DexRouter swap entry points taken from `allowedMethodSelectors`
+                // (excludes swapWrap*/smartSwapByInvest*/claimTokens). If signer logs show
+                // `method not allowed` for chainId=4663, add the selector returned by OKX /swap here
+                // AND in `allowedMethodSelectors`.
+                '0x6e2a35a7ad683cf634d91492d73bb7ff774c6919': [
+                    '0x03b87e5f', // smartSwapTo
+                    '0x08298b5a', // unxswapTo
+                    '0x0d5f0e3b', // uniswapV3SwapTo
+                    '0x44014e98', // uniswapV3SwapToWithBaseRequest
+                    '0x9871efa4', // unxswapByOrderId
+                    '0xb80c2f09', // smartSwapByOrderId
+                    '0xb8815477', // unxswapToWithBaseRequest
+                    '0xf2c42696', // dagSwapByOrderId
+                ],
+                // https://developers.uniswap.org/deployments (SwapRouter02)
+                '0xcaf681a66d020601342297493863e78c959e5cb2': ['0x04e45aaf'],
+            },
+            spenderAllowlist: [
+                '0x42170295f1173c9e5874ea9d00c6d137e1a4f53d', // OKX approval
+                '0xcaf681a66d020601342297493863e78c959e5cb2', // Uniswap SwapRouter02
+            ],
+        },
+    },
+
     // 允许的 to 地址（必须非空；为空会拒绝签名）
     // 统一用小写。
     allowedTo: [
